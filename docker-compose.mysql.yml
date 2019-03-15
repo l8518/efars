@@ -2,7 +2,7 @@ version: '2.2'
 
 services:
   app:
-    image: l8518/thesis-predictionio-basic-recommender:1.3
+    image: l8518/basic-recommender:1.3
     container_name: basic-recommender # Required by EFARS for monitoring
     volumes:
     - ./:/home/pio/app/src
