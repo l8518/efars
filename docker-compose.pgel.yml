@@ -1,0 +1,56 @@
+version: '2.2'
+
+services:
+  app:
+    image: l8518/thesis-predictionio-basic-recommender:1.3
+    volumes:
+    - ./:/home/pio/app/src
+    - ~/.ssh:/home/pio/.ssh
+    ports:
+    - 9000:9000
+    - 8000:8000
+    - 7070:7070
+    depends_on:
+      - elasticsearch
+    environment:
+      PIO_STORAGE_SOURCES_ELASTICSEARCH_TYPE: elasticsearch
+      PIO_STORAGE_SOURCES_ELASTICSEARCH_HOSTS: elasticsearch
+      PIO_STORAGE_SOURCES_ELASTICSEARCH_PORTS: 9200
+      PIO_STORAGE_SOURCES_ELASTICSEARCH_SCHEMES: http
+      PIO_STORAGE_REPOSITORIES_EVENTDATA_NAME: pio_event
+      PIO_STORAGE_REPOSITORIES_EVENTDATA_SOURCE: ELASTICSEARCH
+      PIO_STORAGE_REPOSITORIES_METADATA_NAME: pio_meta
+      PIO_STORAGE_REPOSITORIES_METADATA_SOURCE: ELASTICSEARCH
+      PIO_STORAGE_SOURCES_PGSQL_TYPE: jdbc
+      PIO_STORAGE_SOURCES_PGSQL_URL: "jdbc:postgresql://postgres/pio"
+      PIO_STORAGE_SOURCES_PGSQL_USERNAME: pio
+      PIO_STORAGE_SOURCES_PGSQL_PASSWORD: pio
+      PIO_STORAGE_REPOSITORIES_MODELDATA_NAME: pio_model
+      PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE: PGSQL
+      BASIC_REC_WARM_UP_DELAY: 30
+      BASIC_REC_DRIVER_MEM: 64G
+      BASIC_REC_EXECUTOR_MEM: 64G
+      BASIC_REC_TRAIN_DEPLOY_STEPS_SKIPPED: 10
+
+  postgres:
+    image: postgres:9.6
+    environment:
+      POSTGRES_USER: pio
+      POSTGRES_PASSWORD: pio
+      POSTGRES_DB: pio
+      POSTGRES_INITDB_ARGS: --encoding=UTF8
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.4
+    environment:
+      - xpack.graph.enabled=false
+      - xpack.ml.enabled=false
+      - xpack.monitoring.enabled=false
+      - xpack.security.enabled=false
+      - xpack.watcher.enabled=false
+      - cluster.name=predictionio
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
