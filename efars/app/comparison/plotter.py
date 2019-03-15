@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pandas
 from matplotlib.ticker import FuncFormatter
 from pandas.plotting import register_matplotlib_converters
+import numpy
 
 register_matplotlib_converters()
 
@@ -27,28 +28,91 @@ class Plotter():
         f1_score_max = 0
         failure_max = 0
         duration_max = 0
-        for run, fetches_df in self.fetch_metrics.items():
+        for run, fetches_df in self.receiver_metrics.items():
             f1_score_max = max(f1_score_max, fetches_df['f1 score'].max())
             failure_max = max(failure_max, fetches_df['failure_indice'].max())
             duration_max = max(duration_max, fetches_df['time_elapsed'].max())
+
+        for run, pdf in self.provider_metrics.items():
+            failure_max = max(failure_max, pdf['provisions_failed_cnt'].max())
 
         # increase maximums to avoid tigh layout
         f1_score_max = f1_score_max * 1.05
         failure_max = failure_max * 1.05
         duration_max = duration_max * 1.05
 
-        for run, fetches_df in self.fetch_metrics.items():
+        for run, rdf in self.receiver_metrics.items():
+            pdf = self.provider_metrics[run]
             label_suffix = "{0}".format(run)
-            self.scores_per_run(fetches_df, label_suffix,
+            self.plot_quality_with_failures(rdf, pdf,  label_suffix,
                                 f1_score_max, failure_max, duration_max)
+    
+    def plot_quality_with_failures(self, rdf, pdf, label_suffix, f1_score_max, failure_max, duration_max):
+        """ plots the f1 score and the failed requests """
+
+        rdf['provisions_failed_cnt'] = pdf['provisions_failed_cnt']
+        rdf = rdf.set_index("time_elapsed")
+
+        x_axis = rdf.index
+
+        # define axis
+        f1_axis = rdf['f1 score']
+        receiver_errors_axis = rdf['failure_indice']
+        provider_errors_axis = rdf['provisions_failed_cnt']
+
+        # plot f1 metrics and failed fetches in one diagram:
+        fig = plt.figure(figsize=(10, 6))
+        ax1 = fig.add_subplot(111)
+
+        self.plot_f1_with_failures(
+            fig, ax1, x_axis, f1_axis, provider_errors_axis, receiver_errors_axis, f1_score_max, failure_max, duration_max)
+        
+        ax1.patch.set_visible(False)  # hide the 'canvas'
+
+        fig.tight_layout()
+        label = "f1-failure-{0}".format(label_suffix)
+        save_path = os.path.join(
+            self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
+        plt.legend()
+        plt.savefig(save_path)
+        plt.close()
+
+    def plot_f1_with_failures(self, fig, ax1, x_axis, f1_axis, provider_f_axis, receiver_f_axis, f1_score_max, failure_max, duration_max):
+        # plot f1 metrics and failed fetches in one diagram:
+        ax1.plot(x_axis, f1_axis, '-', zorder=10,
+                 color=self.colorbrewer2_colors(0), linewidth=2)
+        ax1.set_ylabel('F1 Score')
+        ax1.set_xlabel('Duration (h:mm:ss)')
+        ax1.set_ylim(bottom=0, top=f1_score_max)
+        
+        formatter = matplotlib.ticker.FuncFormatter(format_time_ticks)
+        ax1.xaxis.set_major_formatter(formatter)
+        # add grid and select tight layout
+        ax1.grid(which='major', axis='y', linestyle='--')
+
+        # plot the failures as bars
+        bar_width = (len(x_axis) * 5)
+        ax2 = ax1.twinx()
+        ax2.set_ylim(bottom=0, top=failure_max)
+        
+        ax2.bar(x_axis, receiver_f_axis, bar_width,
+                color=self.colorbrewer2_colors(1), edgecolor='none', zorder=1, label='Failed Requests')
+        ax2.bar(x_axis, provider_f_axis, width=bar_width*0.4,
+                color=self.colorbrewer2_colors(2), edgecolor='none', zorder=2, label='Failed Provisions')
+        ax2.set_ylabel('Average Failures')
+
+        ax1.set_zorder(ax2.get_zorder()+1)  # put ax in front of ax2
 
     def calculate_quality_metrics_boxplots(self):
         """ Calculates the quality metrics as boxplots for the evaluation """
         bp_f1_df = pandas.DataFrame()
-        bp_fail_df = pandas.DataFrame()
-        for run, fetches_df in self.fetch_metrics.items():
+        bp_receiver_fail_df = pandas.DataFrame()
+        bp_provider_fail_df = pandas.DataFrame()
+        for run, fetches_df in self.receiver_metrics.items():
+            pdf = self.provider_metrics[run]
             bp_f1_df[run] = fetches_df['f1 score']
-            bp_fail_df[run] = fetches_df['failure_indice']
+            bp_receiver_fail_df[run] = fetches_df['failure_indice']
+            bp_provider_fail_df[run] = pdf['provisions_failed_cnt']
 
         # show box plot:
         bp = bp_f1_df.boxplot()
@@ -56,10 +120,19 @@ class Plotter():
         label = "box-plot-f1"
         save_path = os.path.join(
             self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
+        plt.savefig(save_path)
 
-        bp = bp_fail_df.boxplot()
+        bp = bp_receiver_fail_df.boxplot()
         bp.set_ylabel('Average Amount of Failed Requests')
-        label = "box-plot-failure"
+        label = "box-plot-receiver-failure"
+        save_path = os.path.join(
+            self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
+        plt.savefig(save_path)
+        plt.close()
+
+        bp = bp_provider_fail_df.boxplot()
+        bp.set_ylabel('Average Amount of Failed Provisions')
+        label = "box-plot-provider-failure"
         save_path = os.path.join(
             self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
         plt.savefig(save_path)
@@ -70,51 +143,6 @@ class Plotter():
                   "#984ea3", "#ff7f00", "#ffff33", "#a65628"]
         select_idx = i % len(colors)
         return colors[select_idx]
-
-    def scores_per_run(self, df, label_suffix, f1_score_max, failure_max, duration_max):
-        """ plots the f1 score and the failed requests """
-        df = df.set_index("time_elapsed")
-        x_axis = df.index
-
-        # define axis
-        f1_axis = df['f1 score']
-        failure_axis = df['failure_indice']
-
-        # plot f1 metrics and failed fetches in one diagram:
-        fig, ax1 = plt.subplots(figsize=(10, 6))
-        self.plot_f1_with_failures(
-            fig, ax1, x_axis, f1_axis, failure_axis, f1_score_max, failure_max, duration_max)
-        # add grid and select tight layout
-        ax1.grid(which='major', axis='y', linestyle='--')
-        fig.tight_layout()
-
-        ax1.patch.set_visible(False)  # hide the 'canvas'
-        label = "f1-failure-{0}".format(label_suffix)
-        save_path = os.path.join(
-            self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-        plt.savefig(save_path)
-
-    def plot_f1_with_failures(self, fig, ax1, x_axis, f1_axis, failure_axis, f1_score_max, failure_max, duration_max):
-        # plot f1 metrics and failed fetches in one diagram:
-        ax1.plot(x_axis, f1_axis, '-', zorder=10,
-                 color=self.colorbrewer2_colors(1), linewidth=2)
-        ax1.set_ylabel('F1 Score')
-        ax1.set_xlabel('Duration (h:mm:ss)')
-        ax1.set_ylim(bottom=0, top=f1_score_max)
-        ax1.set_xlim(left=duration_max*-0.01, right=duration_max)
-        
-        formatter = matplotlib.ticker.FuncFormatter(format_time_ticks)
-        ax1.xaxis.set_major_formatter(formatter)
-
-        # plot the failures as bars
-        bar_width = (len(x_axis) * 1)
-        ax2 = ax1.twinx()
-        ax2.set_ylim(bottom=0, top=failure_max)
-        #ax2.set_xlim(left=0, right=duration_max )
-        ax2.bar(x_axis, failure_axis, bar_width,
-                color=self.colorbrewer2_colors(0), edgecolor='none', zorder=1)
-        ax2.set_ylabel('Average Amount of Failed Requests')
-        ax1.set_zorder(ax2.get_zorder()+1)  # put ax in front of ax2
 
     def calculate_performance_results(self):
         # CPU usage is measured in "user jiffies (1/100 th of a second)" (aka 10ms)
@@ -137,12 +165,15 @@ class Plotter():
                     cpu_bp_df[run_type] = (
                         df['cpu_stats_cpu_usage_total_usage'] / 100)
                     avgcpu_bp_df[run_type] = (df['avg_cpu'])
+                # box plot CPU Usage in Seconds
                 bp = cpu_bp_df.boxplot()
                 bp.set_ylabel('CPU Usage in Seconds')
                 label = "box-plot-cpu-usage-{0}".format(label_suffix)
                 save_path = os.path.join(
                     self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
                 plt.savefig(save_path)
+                plt.close()
+
                 avg_bp = avgcpu_bp_df.boxplot()
                 avg_bp.set_ylabel('CPU Usage in %')
                 avg_bp.yaxis.set_major_formatter(
@@ -151,6 +182,8 @@ class Plotter():
                 save_path = os.path.join(
                     self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
                 plt.savefig(save_path)
+                plt.close()
+                
             if container.lower().startswith('memory'):
                 mem_bp_df = pandas.DataFrame()
                 for run_type, df in data_per_run_dic.items():
@@ -162,7 +195,7 @@ class Plotter():
                 save_path = os.path.join(
                     self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
                 plt.savefig(save_path)
-            plt.close()
+                plt.close()
 
     def cpu_usage_percent_per_run(self, data_per_run_dic, label_suffix):
         fig = plt.figure()
@@ -179,7 +212,7 @@ class Plotter():
             x_axis = df.index
             # https://github.com/moby/moby/issues/16849
             y = df['avg_cpu']
-            ax.plot(x_axis, y, 'o-', color=self.colorbrewer2_colors(i),
+            ax.plot(x_axis, y, '-', color=self.colorbrewer2_colors(i),
                     label="{0}".format(run_type))
 
             # set the axis according to max values:
@@ -200,6 +233,7 @@ class Plotter():
         save_path = os.path.join(
             self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
         plt.savefig(save_path)
+        plt.close()
 
     def cpu_usage_per_run(self, data_per_run_dic, label_suffix):
         fig = plt.figure()
@@ -216,7 +250,7 @@ class Plotter():
             x_axis = df.index
             # convert to jiffies to seconds
             y = df['cpu_stats_cpu_usage_total_usage'] / 100
-            ax.plot(x_axis, y, 'o-', color=self.colorbrewer2_colors(i),
+            ax.plot(x_axis, y, '-', color=self.colorbrewer2_colors(i),
                     label="{0}".format(run_type))
             # set the axis according to max values:
             y_max = max(y_max, y.max())
@@ -234,6 +268,7 @@ class Plotter():
         save_path = os.path.join(
             self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
         plt.savefig(save_path)
+        plt.close()
 
     def mem_usage_per_run(self, data_per_run_dic, label_suffix):
         fig = plt.figure()
@@ -248,8 +283,9 @@ class Plotter():
             i += 1
             df = df.set_index("time_elapsed")
             x_axis = df.index
-            y = df['usage'].apply(lambda x: x / 1024 / 1024)
-            ax.plot(x_axis, y, 'o-', color=self.colorbrewer2_colors(i),
+            y = df['usage'] - df['stats_cache'] # source: https://github.com/docker/docker-ce/blob/222348eaf2226f0324a32744ad06d4a7bfe789ac/components/cli/cli/command/container/stats_helpers.go#L225
+            y = y.apply(lambda x: x / 1024 / 1024)
+            ax.plot(x_axis, y, '-', color=self.colorbrewer2_colors(i),
                     label="{0}".format(run_type))
             # set the axis according to max values:
             y_max = max(y_max, y.max())
@@ -269,6 +305,8 @@ class Plotter():
         save_path = os.path.join(
             self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
         plt.savefig(save_path)
+        plt.close()
+        
 
     def load_monitor_csvs(self):
         final_result = {}
@@ -288,6 +326,18 @@ class Plotter():
                 final_result[group][run_type] = pandas.read_csv(load_path)
         self.monitor_data = final_result
 
+    def load_provider_csvs(self):
+        final_result = {}
+        csv_fetch_folder = os.path.join(
+            self.run_config.evaluation_csv_folder_path, "provider")
+        fetches = [f for f in os.listdir(csv_fetch_folder) if os.path.isfile(
+            os.path.join(csv_fetch_folder, f))]
+        for csv_file in fetches:
+            cat_run = csv_file[:-4]
+            load_path = os.path.join(csv_fetch_folder, csv_file)
+            final_result[cat_run] = pandas.read_csv(load_path)
+        self.provider_metrics = final_result
+
     def load_fetch_csvs(self):
         final_result = {}
         csv_fetch_folder = os.path.join(
@@ -298,7 +348,7 @@ class Plotter():
             cat_run = csv_file[:-4]
             load_path = os.path.join(csv_fetch_folder, csv_file)
             final_result[cat_run] = pandas.read_csv(load_path)
-        self.fetch_metrics = final_result
+        self.receiver_metrics = final_result
 
 # format the time according to https://stackoverflow.com/questions/15240003/matplotlib-intelligent-axis-labels-for-timedelta
 def format_time_ticks(value, pos):

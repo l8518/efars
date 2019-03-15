@@ -74,6 +74,7 @@ class EfarsPrompt(Cmd):
         print("This might take a while")
         evl.precalc_fetch_data()
         evl.precalc_monitor_data()
+        evl.precalc_provider_data()
         print("metrics calculated...")
         self.do_compare(inp)
 
@@ -82,6 +83,7 @@ class EfarsPrompt(Cmd):
         pltr = Plotter(self.run_config)
         pltr.load_fetch_csvs()
         pltr.load_monitor_csvs()
+        pltr.load_provider_csvs()
         pltr.calculate_quality_metrics_results()
         pltr.calculate_performance_results()
         pltr.calculate_performance_boxplots()

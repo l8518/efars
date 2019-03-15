@@ -13,6 +13,8 @@ from os.path import isfile, join
 
 import dateutil.parser
 import pandas
+import numpy
+
 
 class Comparator():
     def __init__(self, run_config):
@@ -31,6 +33,61 @@ class Comparator():
 
     def get_runs(self):
         return [f for f in listdir(self.run_config.runs_folder_path) if not isfile(join(self.run_config.runs_folder_path, f))]
+
+    def precalc_provider_data(self):
+        " Transform provider log data into meaningful data (aggregration)"
+        temp_result = {}
+        for run in self.runs:
+            category_run = run[:run.rfind('_')]
+            if not category_run in temp_result.keys():
+                temp_result[category_run] = pandas.DataFrame()
+
+            provisions_run_fp = os.path.join(
+                self.run_config.runs_folder_path, run, "provisions", "provision_counts.csv")
+            df = pandas.read_csv(provisions_run_fp, header=None, names=[
+                'read_at', 'provisions_cnt', 'provisions_failed_cnt'])
+            arr = numpy.arange(
+                len(df)) // self.run_config.fetch_recommendations_skip_steps
+            csum_df = df[['provisions_cnt', 'provisions_failed_cnt']].groupby(
+                arr).cumsum().shift()
+            last_tick = len(df) - 1
+            # calculate amount of grouped ticks
+            grouped_ticks = math.floor(
+                last_tick / self.run_config.fetch_recommendations_skip_steps)
+
+            # generate index to get every nth row
+            every_nth_row_idx = range(
+                0, last_tick, self.run_config.fetch_recommendations_skip_steps)
+            every_nth_row_idx = list(every_nth_row_idx) + [last_tick]
+
+            # merge cumsum and every nth row
+            csum_df = csum_df.loc[every_nth_row_idx, :]
+            df = df.loc[every_nth_row_idx, ['read_at']]
+            df['provision_cnt'] = csum_df['provisions_cnt']
+            df['provisions_failed_cnt'] = csum_df['provisions_failed_cnt']
+            temp_result[category_run] = temp_result[category_run].append(
+                df, sort=False)
+        # clear folder
+        csv_provider_folder = os.path.join(
+            self.run_config.evaluation_csv_folder_path, "provider")
+        if os.path.isdir(csv_provider_folder):
+            shutil.rmtree(csv_provider_folder)
+
+        for cat_run, df in temp_result.items():
+            avg = pandas.DataFrame()
+            df['read_at'] = df['read_at'].map(
+                lambda x: dateutil.parser.parse(x).timestamp())
+            avg = df[['read_at', 'provision_cnt', 'provisions_failed_cnt']].groupby(
+                df.index).mean()
+            avg['read_at'] = avg['read_at'].map(
+                lambda x: datetime.datetime.utcfromtimestamp(x))
+            avg['time_elapsed'] = avg['read_at'] - avg['read_at'][0]
+            avg['time_elapsed'] = avg['time_elapsed'].map(
+                lambda x: x.total_seconds())
+            pathlib.Path(csv_provider_folder).mkdir(
+                parents=True, exist_ok=True)
+            avg.to_csv(os.path.join(csv_provider_folder,
+                                    "{cat_run}.csv".format(cat_run=cat_run)))
 
     def precalc_monitor_data(self):
         """ reads the hardware files and constructs an processable dict structure"""
@@ -77,6 +134,8 @@ class Comparator():
                 if monitored_data_type in self.run_groups:
                     group = self.run_groups[monitored_data_type]
                 if monitored_data_type.startswith('cpu'):
+                    # following https://github.com/docker/docker-ce/blob/222348eaf2226f0324a32744ad06d4a7bfe789ac/components/cli/cli/command/container/stats_helpers.go#L186
+                    # but slightly different
                     cpu_delta = avg_metrics['cpu_stats_cpu_usage_total_usage'] - \
                         avg_metrics['cpu_stats_cpu_usage_total_usage'].shift(1)
                     system_delta = avg_metrics['cpu_stats_system_cpu_usage'] - \
