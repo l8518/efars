@@ -11,13 +11,6 @@ import numpy
 register_matplotlib_converters()
 
 
-def strip_chars(someString):
-    """ Provides """
-    someString = someString.replace(" ", "-")
-    someString = someString.replace("_", "-")
-    return "".join(c for c in someString if c in "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-")
-
-
 class Plotter():
     def __init__(self, run_config):
         self.run_config = run_config
@@ -45,8 +38,8 @@ class Plotter():
             pdf = self.provider_metrics[run]
             label_suffix = "{0}".format(run)
             self.plot_quality_with_failures(rdf, pdf,  label_suffix,
-                                f1_score_max, failure_max, duration_max)
-    
+                                            f1_score_max, failure_max, duration_max)
+
     def plot_quality_with_failures(self, rdf, pdf, label_suffix, f1_score_max, failure_max, duration_max):
         """ plots the f1 score and the failed requests """
 
@@ -66,7 +59,7 @@ class Plotter():
 
         self.plot_f1_with_failures(
             fig, ax1, x_axis, f1_axis, provider_errors_axis, receiver_errors_axis, f1_score_max, failure_max, duration_max)
-        
+
         ax1.patch.set_visible(False)  # hide the 'canvas'
 
         fig.tight_layout()
@@ -84,7 +77,7 @@ class Plotter():
         ax1.set_ylabel('F1 Score')
         ax1.set_xlabel('Duration (h:mm:ss)')
         ax1.set_ylim(bottom=0, top=f1_score_max)
-        
+
         formatter = matplotlib.ticker.FuncFormatter(format_time_ticks)
         ax1.xaxis.set_major_formatter(formatter)
         # add grid and select tight layout
@@ -94,7 +87,7 @@ class Plotter():
         bar_width = (len(x_axis) * 5)
         ax2 = ax1.twinx()
         ax2.set_ylim(bottom=0, top=failure_max)
-        
+
         ax2.bar(x_axis, receiver_f_axis, bar_width,
                 color=self.colorbrewer2_colors(1), edgecolor='none', zorder=1, label='Failed Requests')
         ax2.bar(x_axis, provider_f_axis, width=bar_width*0.4,
@@ -115,28 +108,11 @@ class Plotter():
             bp_provider_fail_df[run] = pdf['provisions_failed_cnt']
 
         # show box plot:
-        bp = bp_f1_df.boxplot()
-        bp.set_ylabel('F1 score')
-        label = "box-plot-f1"
-        save_path = os.path.join(
-            self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-        plt.savefig(save_path)
-
-        bp = bp_receiver_fail_df.boxplot()
-        bp.set_ylabel('Average Amount of Failed Requests')
-        label = "box-plot-receiver-failure"
-        save_path = os.path.join(
-            self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-        plt.savefig(save_path)
-        plt.close()
-
-        bp = bp_provider_fail_df.boxplot()
-        bp.set_ylabel('Average Amount of Failed Provisions')
-        label = "box-plot-provider-failure"
-        save_path = os.path.join(
-            self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-        plt.savefig(save_path)
-        plt.close()
+        self.__boxplot(bp_f1_df, 'F1 score', "f1-bp")
+        self.__boxplot(bp_receiver_fail_df,
+                       'Average Failed Requests', "receiver-failure-bp")
+        self.__boxplot(bp_provider_fail_df,
+                       'Average Failed Provisions', "provider-failure-bp")
 
     def colorbrewer2_colors(self, i):
         colors = ["#e41a1c", "#377eb8", "#4daf4a",
@@ -166,36 +142,23 @@ class Plotter():
                         df['cpu_stats_cpu_usage_total_usage'] / 100)
                     avgcpu_bp_df[run_type] = (df['avg_cpu'])
                 # box plot CPU Usage in Seconds
-                bp = cpu_bp_df.boxplot()
-                bp.set_ylabel('CPU Usage in Seconds')
-                label = "box-plot-cpu-usage-{0}".format(label_suffix)
-                save_path = os.path.join(
-                    self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-                plt.savefig(save_path)
-                plt.close()
+                self.__boxplot(cpu_bp_df, 'CPU Usage in Seconds',
+                               "cpu-usage-bp{0}".format(label_suffix))
+                # box plot CPU AVG Usage %
+                self.__boxplot(avgcpu_bp_df, 'CPU Usage in %',
+                               "cpu-percentage-bp{0}".format(label_suffix))
 
-                avg_bp = avgcpu_bp_df.boxplot()
-                avg_bp.set_ylabel('CPU Usage in %')
-                avg_bp.yaxis.set_major_formatter(
-                    FuncFormatter('{0:0.1%}'.format))
-                label = "box-plot-cpu-percentage-{0}".format(label_suffix)
-                save_path = os.path.join(
-                    self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-                plt.savefig(save_path)
-                plt.close()
-                
             if container.lower().startswith('memory'):
                 mem_bp_df = pandas.DataFrame()
                 for run_type, df in data_per_run_dic.items():
-                    mem_bp_df[run_type] = df['usage'].apply(
+                    # source: https://github.com/docker/docker-ce/blob/222348eaf2226f0324a32744ad06d4a7bfe789ac/components/cli/cli/command/container/stats_helpers.go#L225
+                    mem_bp_df[run_type] = (df['usage'] - df['stats_cache']).apply(
                         lambda x: x / 1024 / 1024)
-                bp = mem_bp_df.boxplot()
-                bp.set_ylabel('Memory Usage in MiB')
-                label = "box-plot-mem-usage-{0}".format(label_suffix)
-                save_path = os.path.join(
-                    self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-                plt.savefig(save_path)
-                plt.close()
+                self.__boxplot(mem_bp_df, 'Memory Usage in MiB',
+                               "mem-usage-mib-bp{0}".format(label_suffix))
+
+    def get_save_path(self, file_name):
+        return os.path.join(self.run_config.evaluation_plots_folder_path, file_name)
 
     def cpu_usage_percent_per_run(self, data_per_run_dic, label_suffix):
         fig = plt.figure()
@@ -230,9 +193,7 @@ class Plotter():
         plt.grid(which='major', axis='both', linestyle='--')
         plt.legend()
         label = "cpu-usage-percent-{0}".format(label_suffix)
-        save_path = os.path.join(
-            self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-        plt.savefig(save_path)
+        plt.savefig(self.get_save_path(format_filename(label, "pdf")))
         plt.close()
 
     def cpu_usage_per_run(self, data_per_run_dic, label_suffix):
@@ -283,7 +244,8 @@ class Plotter():
             i += 1
             df = df.set_index("time_elapsed")
             x_axis = df.index
-            y = df['usage'] - df['stats_cache'] # source: https://github.com/docker/docker-ce/blob/222348eaf2226f0324a32744ad06d4a7bfe789ac/components/cli/cli/command/container/stats_helpers.go#L225
+            # source: https://github.com/docker/docker-ce/blob/222348eaf2226f0324a32744ad06d4a7bfe789ac/components/cli/cli/command/container/stats_helpers.go#L225
+            y = df['usage'] - df['stats_cache']
             y = y.apply(lambda x: x / 1024 / 1024)
             ax.plot(x_axis, y, '-', color=self.colorbrewer2_colors(i),
                     label="{0}".format(run_type))
@@ -306,7 +268,6 @@ class Plotter():
             self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
         plt.savefig(save_path)
         plt.close()
-        
 
     def load_monitor_csvs(self):
         final_result = {}
@@ -350,8 +311,28 @@ class Plotter():
             final_result[cat_run] = pandas.read_csv(load_path)
         self.receiver_metrics = final_result
 
+    def __boxplot(self, bp_df, ylabel, filelable):
+        bp = bp_df.boxplot()
+        bp.set_ylabel(ylabel)
+        bp_df.describe().to_csv(self.get_save_path(format_filename(filelable, "csv")))
+        plt.savefig(self.get_save_path(format_filename(filelable, "pdf")))
+        plt.close()
+
 # format the time according to https://stackoverflow.com/questions/15240003/matplotlib-intelligent-axis-labels-for-timedelta
+
+
 def format_time_ticks(value, pos):
     "Formats this data to a human readable string"
     timedlt = datetime.timedelta(seconds=value)
     return str(timedlt)
+
+
+def format_filename(filename, filetype):
+    return "{0}.{1}".format(strip_chars(filename), filetype)
+
+
+def strip_chars(someString):
+    """ Provides """
+    someString = someString.replace(" ", "-")
+    someString = someString.replace("_", "-")
+    return "".join(c for c in someString if c in "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-")
