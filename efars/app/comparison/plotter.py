@@ -70,7 +70,8 @@ class Plotter():
         ax2 = ax1.twinx()
 
         # plot f1 metrics and failed fetches in one diagram:
-        ax2.plot(x_axis, f1_axis, '-', zorder=10, linewidth=2, color='r', label='F1 Score')
+        ax2.plot(x_axis, f1_axis, '-', zorder=10,
+                 linewidth=2, color='r', label='F1 Score')
         ax2.yaxis.tick_left()
         ax2.set_ylabel('F1 Score')
 
@@ -128,6 +129,11 @@ class Plotter():
                 self.cpu_usage_percent_per_run(data_per_run_dic, label_suffix)
             if container.lower().startswith('memory'):
                 self.mem_usage_per_run(data_per_run_dic, label_suffix)
+            if container.lower().startswith('block io'):
+                self.blkio_per_run(data_per_run_dic, label_suffix, "bytes_write_sum",
+                                   "Block Storage Written in GiB", "blkio-written")
+                self.blkio_per_run(data_per_run_dic, label_suffix,
+                                   "bytes_read_sum", "Block Storage Read in GiB", "blkio-read")
 
     def calculate_performance_boxplots(self):
         # CPU usage is measured in "user jiffies (1/100 th of a second)" (aka 10ms)
@@ -155,6 +161,18 @@ class Plotter():
                         lambda x: x / 1024 / 1024)
                 self.__boxplot(mem_bp_df, 'Memory Usage in MiB',
                                "mem-usage-mib-bp{0}".format(label_suffix))
+            if container.lower().startswith('block io'):
+                bwby_df = pandas.DataFrame()
+                brby_df = pandas.DataFrame()
+                for run_type, df in data_per_run_dic.items():
+                    bwby_df[run_type] = (df['bytes_write_sum']).apply(
+                        lambda x: x / (1024 ** 3))
+                    brby_df[run_type] = (df['bytes_read_sum']).apply(
+                        lambda x: x / (1024 ** 3))
+                self.__boxplot(bwby_df, 'Block Storage Written in GiB',
+                               "blkio-written-bp{0}".format(label_suffix))
+                self.__boxplot(bwby_df, 'Block Storage Read in GiB',
+                               "blkio-read-bp{0}".format(label_suffix))
 
     def get_save_path(self, file_name):
         return os.path.join(self.run_config.evaluation_plots_folder_path, file_name)
@@ -262,6 +280,42 @@ class Plotter():
         fig.tight_layout()
         self.__save_plot(
             "mem-usage-{0}".format(label_suffix), *data_per_run_dic.values())
+
+    def blkio_per_run(self, data_per_run_dic, label_suffix, blkio_col, ylabel, file_prefix):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel('Duration (h:mm:ss)')
+
+        x_max = 0
+        y_max = 0
+        i = -1
+        for run_type, df in data_per_run_dic.items():
+            i += 1
+            df = df.set_index("time_elapsed")
+            x_axis = df.index
+            # source: https://github.com/docker/docker-ce/blob/222348eaf2226f0324a32744ad06d4a7bfe789ac/components/cli/cli/command/container/stats_helpers.go#L225
+            y = df[blkio_col]
+            y = y.apply(lambda x: x / (1024 ** 3))
+            ax.plot(x_axis, y, '-',
+                    label="{0}".format(run_type))
+            # set the axis according to max values:
+            y_max = max(y_max, y.max())
+            x_max = max(x_max, x_axis.max())
+
+        # format the time according to https://stackoverflow.com/questions/15240003/matplotlib-intelligent-axis-labels-for-timedelta
+        formatter = matplotlib.ticker.FuncFormatter(format_time_ticks)
+        ax.xaxis.set_major_formatter(formatter)
+
+        ax.set_ylim(bottom=0, top=y_max*1.05)
+        ax.set_xlim(left=0, right=x_max*1.05)
+
+        # Other formatting stuff
+        plt.grid(which='major', axis='both', linestyle='--')
+        plt.legend()
+        fig.tight_layout()
+        self.__save_plot(
+            "{0}-{1}".format(file_prefix, label_suffix), *data_per_run_dic.values())
 
     def load_monitor_csvs(self):
         final_result = {}

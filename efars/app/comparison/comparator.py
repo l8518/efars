@@ -29,7 +29,8 @@ class Comparator():
         self.runs = self.get_runs()
         # temporary config, for selcting only necesssary data
         self.run_groups = {'cpu_basic-recommender': 'CPU Basic Recommender', 'cpu_database': 'CPU Database',
-                           'memory_basic-recommender': 'Memory Basic Recommender', 'memory_database': 'Memory Database'}
+                           'memory_basic-recommender': 'Memory Basic Recommender', 'memory_database': 'Memory Database',
+                           'blkio_basic-recommender': 'Block IO Basic Recommender', 'blkio_database': 'Block IO Database'}
 
     def get_runs(self):
         return [f for f in listdir(self.run_config.runs_folder_path) if not isfile(join(self.run_config.runs_folder_path, f))]
@@ -113,11 +114,14 @@ class Comparator():
                 df = pandas.read_csv(os.path.join(
                     monitor_folder_path, file))
                 # index for all
+                if info_type.startswith("blkio"):
+                    df['bytes_read_sum'] = get_blkio_sum_devices(df, "Read")
+                    df['bytes_write_sum'] = get_blkio_sum_devices(df, "Write")
                 df['read_at'] = df['read_at'].map(
                     lambda x: dateutil.parser.parse(x))
                 df['time_elapsed'] = df['read_at'] - df['read_at'][0]
                 df['time_elapsed'] = df['time_elapsed'].map(
-                    lambda x: x.total_seconds())
+                   lambda x: x.total_seconds())
                 temp_result[category_run][info_type] = temp_result[category_run][info_type].append(
                     df, sort=False)
 
@@ -354,3 +358,13 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         # Create an index range for l of n items:
         yield l[i:i+n]
+
+def get_blkio_sum_devices(df, op):
+    op_cols = list(filter(lambda x: x.startswith(
+        "io_service_bytes") and x.endswith("op"), df.columns))
+    device_read_ops = list(
+        filter(lambda x: df.iloc[0][x] == op, op_cols))
+    device_ids = list(map(lambda x: x.lstrip(
+        "io_service_bytes_recursive_").rstrip("_op"), device_read_ops))
+    value_cols = list(map(lambda x: "io_service_bytes_recursive_{0}_value".format(x), device_ids))
+    return df[value_cols].sum(axis=1)
