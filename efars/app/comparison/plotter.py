@@ -209,7 +209,7 @@ class Plotter():
             i += 1
             df = df.set_index("time_elapsed")
             x_axis = df.index
-            # convert to jiffies to seconds
+            # convert to jiffies to seconds, according to https://docs.docker.com/v17.09/engine/admin/runmetrics/#cpu-metrics-cpuacctstat
             y = df['cpu_stats_cpu_usage_total_usage'] / 100
             ax.plot(x_axis, y, '-', color=self.colorbrewer2_colors(i),
                     label="{0}".format(run_type))
