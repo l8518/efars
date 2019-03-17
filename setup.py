@@ -14,6 +14,7 @@ setup(name='efars',
           "python-dotenv",
           "numpy",
           "pandas",
-          "matplotlib"
+          "matplotlib",
+          "seaborn"
       ],
       zip_safe=False)

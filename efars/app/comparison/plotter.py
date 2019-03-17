@@ -7,12 +7,14 @@ import pandas
 from matplotlib.ticker import FuncFormatter
 from pandas.plotting import register_matplotlib_converters
 import numpy
+import seaborn as sns
 
 register_matplotlib_converters()
 
 
 class Plotter():
     def __init__(self, run_config):
+        sns.set()
         self.run_config = run_config
 
     def calculate_quality_metrics_results(self):
@@ -45,13 +47,14 @@ class Plotter():
 
         rdf['provisions_failed_cnt'] = pdf['provisions_failed_cnt']
         rdf = rdf.set_index("time_elapsed")
+        plotdf = rdf
 
         x_axis = rdf.index
 
         # define axis
-        f1_axis = rdf['f1 score']
-        receiver_errors_axis = rdf['failure_indice']
-        provider_errors_axis = rdf['provisions_failed_cnt']
+        f1_axis = plotdf['f1 score']
+        receiver_errors_axis = plotdf['failure_indice']
+        provider_errors_axis = plotdf['provisions_failed_cnt']
 
         # plot f1 metrics and failed fetches in one diagram:
         fig = plt.figure(figsize=(10, 6))
@@ -60,41 +63,43 @@ class Plotter():
         self.plot_f1_with_failures(
             fig, ax1, x_axis, f1_axis, provider_errors_axis, receiver_errors_axis, f1_score_max, failure_max, duration_max)
 
-        ax1.patch.set_visible(False)  # hide the 'canvas'
-
         fig.tight_layout()
-        label = "f1-failure-{0}".format(label_suffix)
-        save_path = os.path.join(
-            self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-        plt.legend()
-        plt.savefig(save_path)
-        plt.close()
+        self.__save_plot("f1-failure-{0}".format(label_suffix), plotdf)
 
     def plot_f1_with_failures(self, fig, ax1, x_axis, f1_axis, provider_f_axis, receiver_f_axis, f1_score_max, failure_max, duration_max):
+        ax2 = ax1.twinx()
+
         # plot f1 metrics and failed fetches in one diagram:
-        ax1.plot(x_axis, f1_axis, '-', zorder=10,
-                 color=self.colorbrewer2_colors(0), linewidth=2)
-        ax1.set_ylabel('F1 Score')
-        ax1.set_xlabel('Duration (h:mm:ss)')
-        ax1.set_ylim(bottom=0, top=f1_score_max)
+        ax2.plot(x_axis, f1_axis, '-', zorder=10, linewidth=2, color='r', label='F1 Score')
+        ax2.yaxis.tick_left()
+        ax2.set_ylabel('F1 Score')
+
+        ax2.set_ylim(bottom=0, top=f1_score_max)
+        ax2.yaxis.set_label_position("left")
 
         formatter = matplotlib.ticker.FuncFormatter(format_time_ticks)
         ax1.xaxis.set_major_formatter(formatter)
-        # add grid and select tight layout
-        ax1.grid(which='major', axis='y', linestyle='--')
+        ax1.set_xlim(left=max(x_axis)*-0.02, right=max(x_axis)*1.02)
 
         # plot the failures as bars
         bar_width = (len(x_axis) * 5)
-        ax2 = ax1.twinx()
-        ax2.set_ylim(bottom=0, top=failure_max)
+        ax1.set_ylim(bottom=0, top=failure_max)
+        ax1.bar(x_axis, receiver_f_axis, bar_width,
+                edgecolor='none', zorder=1, label='Failed Requests')
+        ax1.bar(x_axis, provider_f_axis, width=bar_width*0.4,
+                edgecolor='none', zorder=2, label='Failed Provisions')
+        ax1.yaxis.tick_right()
+        ax1.yaxis.set_label_position("right")
+        ax1.set_ylabel('Average Failures')
+        ax1.set_xlabel('Duration (h:mm:ss)')
+        ax1.grid(False)
+        ax1.grid(which='major', axis='x', linestyle='--')
 
-        ax2.bar(x_axis, receiver_f_axis, bar_width,
-                color=self.colorbrewer2_colors(1), edgecolor='none', zorder=1, label='Failed Requests')
-        ax2.bar(x_axis, provider_f_axis, width=bar_width*0.4,
-                color=self.colorbrewer2_colors(2), edgecolor='none', zorder=2, label='Failed Provisions')
-        ax2.set_ylabel('Average Failures')
-
-        ax1.set_zorder(ax2.get_zorder()+1)  # put ax in front of ax2
+        # ask matplotlib for the plotted objects and their labels
+        # ask matplotlib for the plotted objects and their labels
+        lines, labels = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines + lines2, labels + labels2, loc=0)
 
     def calculate_quality_metrics_boxplots(self):
         """ Calculates the quality metrics as boxplots for the evaluation """
@@ -113,12 +118,6 @@ class Plotter():
                        'Average Failed Requests', "receiver-failure-bp")
         self.__boxplot(bp_provider_fail_df,
                        'Average Failed Provisions', "provider-failure-bp")
-
-    def colorbrewer2_colors(self, i):
-        colors = ["#e41a1c", "#377eb8", "#4daf4a",
-                  "#984ea3", "#ff7f00", "#ffff33", "#a65628"]
-        select_idx = i % len(colors)
-        return colors[select_idx]
 
     def calculate_performance_results(self):
         # CPU usage is measured in "user jiffies (1/100 th of a second)" (aka 10ms)
@@ -146,7 +145,7 @@ class Plotter():
                                "cpu-usage-bp{0}".format(label_suffix))
                 # box plot CPU AVG Usage %
                 self.__boxplot(avgcpu_bp_df, 'CPU Usage in %',
-                               "cpu-percentage-bp{0}".format(label_suffix))
+                               "cpu-percentage-bp{0}".format(label_suffix), FuncFormatter('{0:0.1%}'.format))
 
             if container.lower().startswith('memory'):
                 mem_bp_df = pandas.DataFrame()
@@ -175,7 +174,7 @@ class Plotter():
             x_axis = df.index
             # https://github.com/moby/moby/issues/16849
             y = df['avg_cpu']
-            ax.plot(x_axis, y, '-', color=self.colorbrewer2_colors(i),
+            ax.plot(x_axis, y, '-',
                     label="{0}".format(run_type))
 
             # set the axis according to max values:
@@ -188,13 +187,12 @@ class Plotter():
         formatter = matplotlib.ticker.FuncFormatter(format_time_ticks)
         ax.xaxis.set_major_formatter(formatter)
         ax.yaxis.set_major_formatter(FuncFormatter('{0:0.1%}'.format))
-
         # Other formatting stuff
         plt.grid(which='major', axis='both', linestyle='--')
         plt.legend()
-        label = "cpu-usage-percent-{0}".format(label_suffix)
-        plt.savefig(self.get_save_path(format_filename(label, "pdf")))
-        plt.close()
+        fig.tight_layout()
+        self.__save_plot(
+            "cpu-usage-percent-{0}".format(label_suffix), *data_per_run_dic.values())
 
     def cpu_usage_per_run(self, data_per_run_dic, label_suffix):
         fig = plt.figure()
@@ -211,7 +209,7 @@ class Plotter():
             x_axis = df.index
             # convert to jiffies to seconds, according to https://docs.docker.com/v17.09/engine/admin/runmetrics/#cpu-metrics-cpuacctstat
             y = df['cpu_stats_cpu_usage_total_usage'] / 100
-            ax.plot(x_axis, y, '-', color=self.colorbrewer2_colors(i),
+            ax.plot(x_axis, y, '-',
                     label="{0}".format(run_type))
             # set the axis according to max values:
             y_max = max(y_max, y.max())
@@ -225,11 +223,9 @@ class Plotter():
         # Other formatting stuff
         plt.grid(which='major', axis='both', linestyle='--')
         plt.legend()
-        label = "cpu-usage-{0}".format(label_suffix)
-        save_path = os.path.join(
-            self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-        plt.savefig(save_path)
-        plt.close()
+        fig.tight_layout()
+        self.__save_plot(
+            "cpu-usage-{0}".format(label_suffix), *data_per_run_dic.values())
 
     def mem_usage_per_run(self, data_per_run_dic, label_suffix):
         fig = plt.figure()
@@ -247,7 +243,7 @@ class Plotter():
             # source: https://github.com/docker/docker-ce/blob/222348eaf2226f0324a32744ad06d4a7bfe789ac/components/cli/cli/command/container/stats_helpers.go#L225
             y = df['usage'] - df['stats_cache']
             y = y.apply(lambda x: x / 1024 / 1024)
-            ax.plot(x_axis, y, '-', color=self.colorbrewer2_colors(i),
+            ax.plot(x_axis, y, '-',
                     label="{0}".format(run_type))
             # set the axis according to max values:
             y_max = max(y_max, y.max())
@@ -263,11 +259,9 @@ class Plotter():
         # Other formatting stuff
         plt.grid(which='major', axis='both', linestyle='--')
         plt.legend()
-        label = "mem-usage-{0}".format(label_suffix)
-        save_path = os.path.join(
-            self.run_config.evaluation_plots_folder_path, "{0}.pdf".format(strip_chars(label)))
-        plt.savefig(save_path)
-        plt.close()
+        fig.tight_layout()
+        self.__save_plot(
+            "mem-usage-{0}".format(label_suffix), *data_per_run_dic.values())
 
     def load_monitor_csvs(self):
         final_result = {}
@@ -311,12 +305,22 @@ class Plotter():
             final_result[cat_run] = pandas.read_csv(load_path)
         self.receiver_metrics = final_result
 
-    def __boxplot(self, bp_df, ylabel, filelable):
-        bp = bp_df.boxplot()
-        bp.set_ylabel(ylabel)
-        bp_df.describe().to_csv(self.get_save_path(format_filename(filelable, "csv")))
-        plt.savefig(self.get_save_path(format_filename(filelable, "pdf")))
+    def __save_plot(self,  file_label, *dfs):
+        for idx, df in enumerate(dfs):
+            if len(dfs) > 1:
+                file_label = "{0}_{1}".format(file_label, idx)
+            df.describe().to_csv(self.get_save_path(format_filename(file_label, "csv")))
+        plt.savefig(self.get_save_path(format_filename(file_label, "pdf")))
         plt.close()
+
+    def __boxplot(self, bp_df, ylabel, file_label, yax_formatter=None):
+        fig = plt.figure()
+        axes = bp_df.boxplot()
+        if (yax_formatter) is not None:
+            axes.yaxis.set_major_formatter(yax_formatter)
+        axes.set_ylabel(ylabel)
+        fig.tight_layout()
+        self.__save_plot(file_label, bp_df)
 
 # format the time according to https://stackoverflow.com/questions/15240003/matplotlib-intelligent-axis-labels-for-timedelta
 
@@ -324,7 +328,9 @@ class Plotter():
 def format_time_ticks(value, pos):
     "Formats this data to a human readable string"
     timedlt = datetime.timedelta(seconds=value)
-    return str(timedlt)
+    hours, remainder = divmod(timedlt.total_seconds(), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return "{h:02.0f}:{m:02.0f}:{s:02.0f}".format(h=hours, m=minutes, s=seconds)
 
 
 def format_filename(filename, filetype):
