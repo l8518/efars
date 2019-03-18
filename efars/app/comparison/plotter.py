@@ -171,7 +171,7 @@ class Plotter():
                         lambda x: x / (1024 ** 3))
                 self.__boxplot(bwby_df, 'Block Storage Written in GiB',
                                "blkio-written-bp-{0}".format(label_suffix))
-                self.__boxplot(bwby_df, 'Block Storage Read in GiB',
+                self.__boxplot(brby_df, 'Block Storage Read in GiB',
                                "blkio-read-bp-{0}".format(label_suffix))
 
     def get_save_path(self, file_name):
