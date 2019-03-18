@@ -360,6 +360,7 @@ class Plotter():
         self.receiver_metrics = final_result
 
     def __save_plot(self,  file_label, *dfs):
+        file_label = file_label.lower()
         for idx, df in enumerate(dfs):
             desc_file_label = file_label
             if len(dfs) > 1:
