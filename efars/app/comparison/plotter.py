@@ -153,17 +153,17 @@ class Plotter():
                                "cpu-usage-bp-{0}".format(label_suffix))
                 # box plot CPU AVG Usage %
                 self.__boxplot(avgcpu_bp_df, 'CPU Usage in %',
-                        "cpu-percentage-bp-{0}".format(label_suffix), yax_formatter= FuncFormatter('{0:0.1%}'.format))
+                               "cpu-percentage-bp-{0}".format(label_suffix), yax_formatter=FuncFormatter('{0:0.1%}'.format))
                 cpu_bp_df["Component"] = container.lstrip("CPU ")
                 grouped_cpu_usage = grouped_cpu_usage.append(cpu_bp_df)
                 avgcpu_bp_df["Component"] = container.lstrip("CPU ")
                 grouped_cpu_perc = grouped_cpu_perc.append(avgcpu_bp_df)
         # Plot Grouped
         self.__boxplot(grouped_cpu_usage, 'CPU Usage in Seconds',
-                        "cpu-usage-bp-grouped", grp_by = "Component")
+                       "cpu-usage-bp-grouped", grp_by="Component")
         self.__boxplot(grouped_cpu_perc, 'CPU Usage in %',
-                        "cpu-percent-bp-grouped", grp_by = "Component",
-                        yax_formatter= FuncFormatter('{0:0.1%}'.format))
+                       "cpu-percent-bp-grouped", grp_by="Component",
+                       yax_formatter=FuncFormatter('{0:0.1%}'.format))
 
         grouped_mem = pandas.DataFrame()
         for container, data_per_run_dic in self.monitor_data.items():
@@ -178,7 +178,7 @@ class Plotter():
                 mem_bp_df["Component"] = container.lstrip("Memory ")
                 grouped_mem = grouped_mem.append(mem_bp_df)
         self.__boxplot(grouped_mem, 'Memory Usage in MiB',
-                    "mem-usage-mib-bp-grouped", grp_by = "Component")
+                       "mem-usage-mib-bp-grouped", grp_by="Component")
 
         grouped_bw = pandas.DataFrame()
         grouped_br = pandas.DataFrame()
@@ -200,9 +200,10 @@ class Plotter():
                 brby_df["Component"] = container.replace("Block IO ", "")
                 grouped_br = grouped_br.append(brby_df)
         self.__boxplot(grouped_bw, 'Block Storage Written in GiB',
-                            "blkio-written-bp-grouped", grp_by = "Component")
+                       "blkio-written-bp-grouped", grp_by="Component")
         self.__boxplot(grouped_br, 'Block Storage Read in GiB',
-                            "blkio-read-bp-grouped", grp_by = "Component")
+                       "blkio-read-bp-grouped", grp_by="Component")
+
     def get_save_path(self, file_name):
         return os.path.join(self.run_config.evaluation_plots_folder_path, file_name)
 
@@ -407,17 +408,17 @@ class Plotter():
             axes = bp_df.boxplot(by=grp_by)
         else:
             axes = [bp_df.boxplot()]
-            # assigned as list, to allow iteration 
+            # assigned as list, to allow iteration
             # (because grouped boxplox return axes as nparray)
         for single_axes in axes:
             if (yax_formatter) is not None:
                 single_axes.yaxis.set_major_formatter(yax_formatter)
             single_axes.set_ylabel(ylabel)
             single_axes.get_figure().tight_layout()
-            single_axes.set_xlabel("") # remove grp_by label set by pandas
+            single_axes.set_xlabel("")  # remove grp_by label set by pandas
         plt.subplots_adjust()
         plt.tight_layout()
-        plt.suptitle("") # remove suptitle set by pandas
+        plt.suptitle("")  # remove suptitle set by pandas
         self.__save_plot(file_label, bp_df, grp_by=grp_by)
 
 # format the time according to https://stackoverflow.com/questions/15240003/matplotlib-intelligent-axis-labels-for-timedelta
