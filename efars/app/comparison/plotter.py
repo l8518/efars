@@ -407,9 +407,12 @@ class Plotter():
         if grp_by is not None:
             axes = bp_df.boxplot(by=grp_by)
         else:
-            axes = [bp_df.boxplot()]
-            # assigned as list, to allow iteration
-            # (because grouped boxplox return axes as nparray)
+            axes = bp_df.boxplot()
+        # assigned as list, to allow iteration
+        # (because grouped boxplox with more then one group
+        # return axes as nparray)
+        if not isinstance(axes, (list,)):
+            axes = [axes]
         for single_axes in axes:
             if (yax_formatter) is not None:
                 single_axes.yaxis.set_major_formatter(yax_formatter)
