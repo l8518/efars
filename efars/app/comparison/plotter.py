@@ -148,10 +148,10 @@ class Plotter():
                     avgcpu_bp_df[run_type] = (df['avg_cpu'])
                 # box plot CPU Usage in Seconds
                 self.__boxplot(cpu_bp_df, 'CPU Usage in Seconds',
-                               "cpu-usage-bp{0}".format(label_suffix))
+                               "cpu-usage-bp-{0}".format(label_suffix))
                 # box plot CPU AVG Usage %
                 self.__boxplot(avgcpu_bp_df, 'CPU Usage in %',
-                               "cpu-percentage-bp{0}".format(label_suffix), FuncFormatter('{0:0.1%}'.format))
+                               "cpu-percentage-bp-{0}".format(label_suffix), FuncFormatter('{0:0.1%}'.format))
 
             if container.lower().startswith('memory'):
                 mem_bp_df = pandas.DataFrame()
@@ -160,7 +160,7 @@ class Plotter():
                     mem_bp_df[run_type] = (df['usage'] - df['stats_cache']).apply(
                         lambda x: x / 1024 / 1024)
                 self.__boxplot(mem_bp_df, 'Memory Usage in MiB',
-                               "mem-usage-mib-bp{0}".format(label_suffix))
+                               "mem-usage-mib-bp-{0}".format(label_suffix))
             if container.lower().startswith('block io'):
                 bwby_df = pandas.DataFrame()
                 brby_df = pandas.DataFrame()
@@ -170,9 +170,9 @@ class Plotter():
                     brby_df[run_type] = (df['bytes_read_sum']).apply(
                         lambda x: x / (1024 ** 3))
                 self.__boxplot(bwby_df, 'Block Storage Written in GiB',
-                               "blkio-written-bp{0}".format(label_suffix))
+                               "blkio-written-bp-{0}".format(label_suffix))
                 self.__boxplot(bwby_df, 'Block Storage Read in GiB',
-                               "blkio-read-bp{0}".format(label_suffix))
+                               "blkio-read-bp-{0}".format(label_suffix))
 
     def get_save_path(self, file_name):
         return os.path.join(self.run_config.evaluation_plots_folder_path, file_name)
