@@ -361,9 +361,10 @@ class Plotter():
 
     def __save_plot(self,  file_label, *dfs):
         for idx, df in enumerate(dfs):
+            desc_file_label = file_label
             if len(dfs) > 1:
-                file_label = "{0}_{1}".format(file_label, idx)
-            df.describe().to_csv(self.get_save_path(format_filename(file_label, "csv")))
+                desc_file_label = "{0}_{1}".format(file_label, idx)
+            df.describe().to_csv(self.get_save_path(format_filename(desc_file_label, "csv")))
         plt.savefig(self.get_save_path(format_filename(file_label, "pdf")))
         plt.close()
 
