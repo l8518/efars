@@ -1,5 +1,7 @@
 # Data stuff
 data/*
+# ignore any starting with data for backup puroposes
+data_*/ 
 # editor related stuff:
 .vscode/
 # Byte-compiled / optimized / DLL files
