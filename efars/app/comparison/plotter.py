@@ -411,7 +411,7 @@ class Plotter():
         # assigned as list, to allow iteration
         # (because grouped boxplox with more then one group
         # return axes as nparray)
-        if not isinstance(axes, (list,)):
+        if not isinstance(axes, (list, numpy.ndarray)):
             axes = [axes]
         for single_axes in axes:
             if (yax_formatter) is not None:
