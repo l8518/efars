@@ -1,5 +1,6 @@
 import math
 import os
+import pathlib
 import subprocess
 import time
 from shutil import copyfile
@@ -42,13 +43,7 @@ class Run():
         pathlib.Path(folder_pt).mkdir(parents=True, exist_ok=True)
         # define file targets
         test_fp = os.path.join(folder_pt, "test.csv")
-        test_relevant_fp = os.path.join(folder_pt, "test_irrelevant.csv")
-        test_irrelevant_fp = os.path.join(folder_pt, "test_relevant.csv")
         copyfile(self.run_config.test_source_file, test_fp)
-        copyfile(self.run_config.test_relevant_source_file, test_relevant_fp)
-        copyfile(
-            self.run_config.test_irrelevant_source_file,
-            test_irrelevant_fp)
 
     def document_runs(self):
         """ Documents the run parameters for this run"""
