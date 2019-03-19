@@ -37,6 +37,9 @@ class RunConfig():
         # Run Parameters
         self.run_warm_up_seconds = int(os.getenv("RUN_WARM_UP_DELAY") or 30)
         self.training_source_file = str(os.getenv("RUN_TRAINING_FILE") or "./data/ratings/train.csv") 
+        self.test_source_file = \
+            str(os.getenv("RUN_TEST_FILE") or
+                "./data/ratings/test.csv")
         self.run_n = int(os.getenv("RUN_N_REPETITION") or 1)
         self.provisions_per_tick = int(os.getenv("RUN_PROVISIONS_PER_TICK") or 2000)
         self.provider_adapter = str(os.getenv("RUN_PROVIDER_ADAPTER") or 'BasicRecommenderProviderAdapter')
