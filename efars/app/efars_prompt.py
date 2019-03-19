@@ -32,18 +32,22 @@ class EfarsPrompt(Cmd):
 
         download_file = ""
         if file_selection == "1":
-            download_file = "http://files.grouplens.org/datasets/movielens/ml-latest-small.zip"
+            # download_file = "http://files.grouplens.org/datasets/movielens/ml-latest-small.zip"
+            zip_file = "./movielens/ml-latest-small.zip"
             extracted_file = "./data/ml-latest-small/ratings.csv"
+            print("extracting test data")
+            self.planner.extract(zip_file)
             user_n = 5  # TODO, this requires a setting
         elif file_selection == "2":
             download_file = "http://files.grouplens.org/datasets/movielens/ml-20m.zip"
+            # zip_file = "./movielens/ml-20m.zip"
+            print("downloading test data")
+            self.planner.download(download_file)
             extracted_file = "./data/ml-20m/ratings.csv"
             user_n = 1700  # TODO, this requires a setting
         else:
             print("Unknow option")
             return
-        print("downloading test data")
-        self.planner.download(download_file)
         print("preparing test data")
         self.run_config.dataset_adapter_instance.generate(
             extracted_file, "./data/ratings/", self.run_config.seed, self.run_config.test_split_ratio, self.run_config.test_relevant_items_rating_threshold, user_n)

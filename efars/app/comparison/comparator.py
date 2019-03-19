@@ -182,12 +182,12 @@ class Comparator():
         self.fetch_metrics = final_result
 
     def precalc_fetch_data(self):
-        test_items = self.read_test_items()
-        uti_splitted = split_into_relevant_and_irrelevant(
-            test_items, self.run_config.test_relevant_items_rating_threshold)
-
         runs_to_process = []
         for run in self.runs:
+            test_items = self.read_test_items(category_run)
+            uti_splitted = split_into_relevant_and_irrelevant(
+                test_items,
+                self.run_config.test_relevant_items_rating_threshold)
             category_run = run[:run.rfind('_')]
             fetches_file_path = os.path.join(
                 self.run_config.runs_folder_path, run, "fetches.csv")
@@ -233,9 +233,14 @@ class Comparator():
             df.to_csv(os.path.join(csv_fetch_folder,
                                    "{cat_run}.csv".format(cat_run=cat_run)))
 
-    def read_test_items(self):
-        ratings_file = open(
-            self.run_config.evaluation_test_dataset_filepath, 'r')
+    def read_test_items(self, category_run):
+        folder_pt = os.path.join(
+            self.run_config.data_root_folder,
+            "test_files",
+            category_run
+        )
+        test_fp = os.path.join(folder_pt, "test.csv")
+        ratings_file = open(test_fp, 'r')
         items = {}
         # read all ratings:
         for line in ratings_file:

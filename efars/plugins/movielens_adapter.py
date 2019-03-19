@@ -25,9 +25,6 @@ class MovieLensDatasetAdapter(DatasetAdapter):
 
         test_filepath = os.path.join(target_folder, "test.csv")
         train_filepath = os.path.join(target_folder, "train.csv")
-        testr_filepath = os.path.join(target_folder, "test_relevant_items.csv")
-        testir_filepath = os.path.join(
-            target_folder, "test_irrelevant_items.csv")
 
         # Load MovieLens Dataset
         df = pandas.read_csv(source_file_path)
@@ -85,8 +82,6 @@ class MovieLensDatasetAdapter(DatasetAdapter):
         # write to csv
         trainset.to_csv(train_filepath, header=False, index=False)
         test_df.to_csv(test_filepath, header=False, index=False)
-        relevant_items.to_csv(testr_filepath, header=False, index=False)
-        irrelevant_items.to_csv(testir_filepath, header=False, index=False)
 
 
 if __name__ == '__main__':

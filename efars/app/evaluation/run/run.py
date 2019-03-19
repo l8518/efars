@@ -1,10 +1,13 @@
-import time
 import math
-from .monitor import Monitor
-from .receiver import Receiver
-from .provider import Provider
-import subprocess
 import os
+import pathlib
+import subprocess
+import time
+from shutil import copyfile
+
+from .monitor import Monitor
+from .provider import Provider
+from .receiver import Receiver
 
 
 class Run():
@@ -29,6 +32,18 @@ class Run():
             # document relevant metrics:
             self.run_times[runname] = time_start_and_end
         self.document_runs()
+        self.persist_test_files()
+
+    def persist_test_files(self):
+        folder_pt = os.path.join(
+            self.run_config.data_root_folder,
+            "test_files",
+            self.run_config.run_prefix
+        )
+        pathlib.Path(folder_pt).mkdir(parents=True, exist_ok=True)
+        # define file targets
+        test_fp = os.path.join(folder_pt, "test.csv")
+        copyfile(self.run_config.test_source_file, test_fp)
 
     def document_runs(self):
         """ Documents the run parameters for this run"""
@@ -56,8 +71,13 @@ class Run():
             self.run_config.provider_adapter_instance, self.run_config.training_source_file, self.run_config.provisions_per_tick, self.run_config.concurrent_provisions, provisions_target_folder)
         monitor = Monitor(self.run_config.docker_containers, self.run_config.docker_sock, runname)
 
-        receiver = Receiver("./data/ratings/test.csv",
-                            fetches_target_folder, self.run_config.concurrent_fetches, self.run_config.receiver_adapter_instance, self.run_config.fetches_rating_n)
+        receiver = Receiver(
+            self.run_config.test_source_file,
+            fetches_target_folder,
+            self.run_config.concurrent_fetches,
+            self.run_config.receiver_adapter_instance,
+            self.run_config.fetches_rating_n
+            )
 
         run_start = time.time()
         measurement_tick = 0

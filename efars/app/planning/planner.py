@@ -15,7 +15,12 @@ class Planner():
         request = requests.get(url)
         file = zipfile.ZipFile(io.BytesIO(request.content))
         file.extractall("./data/")
-        return 
+        return
+
+    def extract(self, zipfp):
+        file = zipfile.ZipFile(zipfp)
+        file.extractall("./data/")
+
 
 class DatasetAdapter(ABC):
 
@@ -23,5 +28,6 @@ class DatasetAdapter(ABC):
         super().__init__()
 
     @abstractmethod
-    def generate(self, source_file_path, target_folder, seed, split_ratio, rating_threshold, user_cnt ):
+    def generate(self, source_file_path, target_folder, seed, split_ratio,
+                 rating_threshold, user_cnt):
         raise NotImplementedError
