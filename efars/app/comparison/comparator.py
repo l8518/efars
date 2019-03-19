@@ -184,15 +184,15 @@ class Comparator():
     def precalc_fetch_data(self):
         runs_to_process = []
         for run in self.runs:
-            test_items = self.read_test_items(category_run)
-            uti_splitted = split_into_relevant_and_irrelevant(
-                test_items,
-                self.run_config.test_relevant_items_rating_threshold)
             category_run = run[:run.rfind('_')]
             fetches_file_path = os.path.join(
-                self.run_config.runs_folder_path, run, "fetches.csv")
+                    self.run_config.runs_folder_path, run, "fetches.csv")
             # skip if this file does not exist yet
             if os.path.isfile(fetches_file_path):
+                test_items = self.read_test_items(category_run)
+                uti_splitted = split_into_relevant_and_irrelevant(
+                    test_items,
+                    self.run_config.test_relevant_items_rating_threshold)
                 runs_to_process.append(run)
         f = functools.partial(read_fetch_metrics_for_run,
                               uti_splitted=uti_splitted, basepath=self.run_config.runs_folder_path, n_ratings=self.run_config.fetches_rating_n, ratings_threshold=self.run_config.test_relevant_items_rating_threshold)
