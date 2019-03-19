@@ -121,7 +121,7 @@ class Comparator():
                     lambda x: dateutil.parser.parse(x))
                 df['time_elapsed'] = df['read_at'] - df['read_at'][0]
                 df['time_elapsed'] = df['time_elapsed'].map(
-                   lambda x: x.total_seconds())
+                    lambda x: x.total_seconds())
                 temp_result[category_run][info_type] = temp_result[category_run][info_type].append(
                     df, sort=False)
 
@@ -186,16 +186,17 @@ class Comparator():
         for run in self.runs:
             category_run = run[:run.rfind('_')]
             fetches_file_path = os.path.join(
-                    self.run_config.runs_folder_path, run, "fetches.csv")
+                self.run_config.runs_folder_path, run, "fetches.csv")
             # skip if this file does not exist yet
             if os.path.isfile(fetches_file_path):
                 test_items = self.read_test_items(category_run)
                 uti_splitted = split_into_relevant_and_irrelevant(
                     test_items,
                     self.run_config.test_relevant_items_rating_threshold)
-                runs_to_process.append(run)
+                tpl = (run, uti_splitted)
+                runs_to_process.append(tpl)
         f = functools.partial(read_fetch_metrics_for_run,
-                              uti_splitted=uti_splitted, basepath=self.run_config.runs_folder_path, n_ratings=self.run_config.fetches_rating_n, ratings_threshold=self.run_config.test_relevant_items_rating_threshold)
+                              basepath=self.run_config.runs_folder_path, n_ratings=self.run_config.fetches_rating_n, ratings_threshold=self.run_config.test_relevant_items_rating_threshold)
 
         metrics_df_tupels = []
         with ThreadPoolExecutor(max_workers=1) as executor:
@@ -292,7 +293,9 @@ def __calculate(arg, uti_splitted, ratings_threshold, n_rating):
     return pandas.DataFrame(results)
 
 
-def read_fetch_metrics_for_run(run_folder, basepath, uti_splitted, n_ratings, ratings_threshold):
+def read_fetch_metrics_for_run(run_tupel, basepath, n_ratings, ratings_threshold):
+    run_folder = run_tupel[0]
+    uti_splitted = run_tupel[1]
     fetches_file_path = os.path.join(basepath, run_folder, "fetches.csv")
     # calculate relevant and irrelevant items from test dataset for each user
     df = pandas.read_csv(fetches_file_path, dtype=str)
@@ -364,6 +367,7 @@ def chunks(l, n):
         # Create an index range for l of n items:
         yield l[i:i+n]
 
+
 def get_blkio_sum_devices(df, op):
     op_cols = list(filter(lambda x: x.startswith(
         "io_service_bytes") and x.endswith("op"), df.columns))
@@ -371,5 +375,6 @@ def get_blkio_sum_devices(df, op):
         filter(lambda x: df.iloc[0][x] == op, op_cols))
     device_ids = list(map(lambda x: x.lstrip(
         "io_service_bytes_recursive_").rstrip("_op"), device_read_ops))
-    value_cols = list(map(lambda x: "io_service_bytes_recursive_{0}_value".format(x), device_ids))
+    value_cols = list(
+        map(lambda x: "io_service_bytes_recursive_{0}_value".format(x), device_ids))
     return df[value_cols].sum(axis=1)

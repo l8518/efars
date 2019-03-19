@@ -413,6 +413,9 @@ class Plotter():
         # return axes as nparray)
         if not isinstance(axes, (list, numpy.ndarray)):
             axes = [axes]
+        
+        if isinstance(axes, (numpy.ndarray)):
+            axes = axes.flatten()
         for single_axes in axes:
             if (yax_formatter) is not None:
                 single_axes.yaxis.set_major_formatter(yax_formatter)
