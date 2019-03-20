@@ -74,7 +74,6 @@ Please note, that macOS and Windows need additionall configuration, you have to:
 ## Enviroment Vars
 # Configuration for Running MovieLens 20m
 ```console
-DOCKER_SOCK=unix://var/run/docker.sock
 # Either two compose files
 # COMPOSE_FILE=docker-compose.mysql.yml
 # COMPOSE_FILE=docker-compose.yml
@@ -87,3 +86,6 @@ RUN_FETCH_SKIP_STEPS=20
 RUN_TICK_DELAY=2
 RUN_WARM_UP_DELAY=40
 RUN_N_REPETITION=2
+```
+
+# Misc

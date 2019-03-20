@@ -1,6 +1,7 @@
 import math
 import os
 import multiprocessing
+import platform
 
 class RunConfig():
 
@@ -18,8 +19,11 @@ class RunConfig():
         else:
             self.docker_containers = ['basic-recommender', 'database']
 
-        self.docker_sock = str(os.getenv("DOCKER_SOCK") or "unix://var/run/docker.sock" )
-
+        # Depending on the OS, set different defaults:
+        if platform.system() != "Windows":
+            self.docker_sock = str(os.getenv("DOCKER_SOCK") or "unix://var/run/docker.sock" )
+        else:
+            self.docker_sock = str(os.getenv("DOCKER_SOCK") or "npipe:////./pipe/docker_engine" )
         # Hardcoded parameters
         self.data_root_folder = os.path.join("data")
         self.data_ratings_folder = os.path.join(self.data_root_folder, "ratings")
