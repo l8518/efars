@@ -1,6 +1,5 @@
 # EFARS - Evaluation Framework for Architectures of Recommender Systems
-This repository is a prottypical implementation the the Evaluation Framework for Architectures of Recommender Systems (EFARS), that was designed during writing my Bachelor Thesis "Performance Benchmark for Recommender
-System Architectures"
+This repository is a prottypical implementation the the Evaluation Framework for Architectures of Recommender Systems (EFARS), that was designed during writing my Bachelor Thesis "Performance Benchmark for Recommender System Architectures"
 
 ## Installation
 EFARS is implemented in Python to leverage on popular data science frameworks, such as numpy, pandas and matplotlib.
