@@ -279,7 +279,8 @@ class Plotter():
             "cpu-usage-{0}".format(label_suffix), *data_per_run_dic.values())
 
     def mem_usage_per_run(self, data_per_run_dic, label_suffix):
-        fig, ax = plt.subplots(1, 1)
+        fig = plt.figure(figsize=(8, 6))
+        ax = fig.add_subplot(111)
         fig.suptitle(label_suffix[7:])
         ax.set_ylabel('Memory Usage in MiB')
         ax.set_xlabel('Duration (h:mm:ss)')
