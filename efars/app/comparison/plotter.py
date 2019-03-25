@@ -11,10 +11,13 @@ import seaborn as sns
 
 register_matplotlib_converters()
 
+plt.rcParams['figure.figsize'] = (7.0, 6.0)
+
 
 class Plotter():
     def __init__(self, run_config):
         sns.set()
+        sns.set(font_scale=1.2)
         self.run_config = run_config
 
     def calculate_quality_metrics_results(self):
@@ -57,13 +60,12 @@ class Plotter():
         provider_errors_axis = plotdf['provisions_failed_cnt']
 
         # plot f1 metrics and failed fetches in one diagram:
-        fig = plt.figure(figsize=(10, 6))
+        fig = plt.figure(figsize=(10, 7))
         ax1 = fig.add_subplot(111)
 
         self.plot_f1_with_failures(
             fig, ax1, x_axis, f1_axis, provider_errors_axis, receiver_errors_axis, f1_score_max, failure_max, duration_max)
 
-        fig.tight_layout()
         self.__save_plot("f1-failure-{0}".format(label_suffix), plotdf)
 
     def plot_f1_with_failures(self, fig, ax1, x_axis, f1_axis, provider_f_axis, receiver_f_axis, f1_score_max, failure_max, duration_max):
@@ -97,10 +99,8 @@ class Plotter():
         ax1.grid(which='major', axis='x', linestyle='--')
 
         # ask matplotlib for the plotted objects and their labels
-        # ask matplotlib for the plotted objects and their labels
-        lines, labels = ax1.get_legend_handles_labels()
-        lines2, labels2 = ax2.get_legend_handles_labels()
-        ax1.legend(lines + lines2, labels + labels2, loc=0)
+        fig.legend(loc=4)
+        fig.subplots_adjust(bottom=0.2)
 
     def calculate_quality_metrics_boxplots(self):
         """ Calculates the quality metrics as boxplots for the evaluation """
@@ -110,15 +110,16 @@ class Plotter():
         for run, fetches_df in self.receiver_metrics.items():
             pdf = self.provider_metrics[run]
             bp_f1_df[run] = fetches_df['f1 score']
+
             bp_receiver_fail_df[run] = fetches_df['failure_indice']
             bp_provider_fail_df[run] = pdf['provisions_failed_cnt']
 
         # show box plot:
-        self.__boxplot(bp_f1_df, 'F1 score', "f1-bp")
-        self.__boxplot(bp_receiver_fail_df,
-                       'Average Failed Requests', "receiver-failure-bp")
-        self.__boxplot(bp_provider_fail_df,
-                       'Average Failed Provisions', "provider-failure-bp")
+        self.__fitted_boxplot(bp_f1_df, 'F1 Score', "f1-bp")
+        self.__fitted_boxplot(bp_receiver_fail_df,
+                              'Average Failed Requests', "receiver-failure-bp")
+        self.__fitted_boxplot(bp_provider_fail_df,
+                              'Average Failed Provisions', "provider-failure-bp")
 
     def calculate_performance_results(self):
         # CPU usage is measured in "user jiffies (1/100 th of a second)" (aka 10ms)
@@ -146,14 +147,14 @@ class Plotter():
                 avgcpu_bp_df = pandas.DataFrame()
                 for run_type, df in data_per_run_dic.items():
                     cpu_bp_df[run_type] = (
-                        df['cpu_stats_cpu_usage_total_usage'] / 100)
+                        df['cpu_stats_cpu_usage_total_usage'])
                     avgcpu_bp_df[run_type] = (df['avg_cpu'])
                 # box plot CPU Usage in Seconds
-                self.__boxplot(cpu_bp_df, 'CPU Usage in Seconds',
-                               "cpu-usage-bp-{0}".format(label_suffix))
+                self.__fitted_boxplot(cpu_bp_df, 'CPU Usage in Seconds',
+                                      "cpu-usage-bp-{0}".format(label_suffix))
                 # box plot CPU AVG Usage %
-                self.__boxplot(avgcpu_bp_df, 'CPU Usage in %',
-                               "cpu-percentage-bp-{0}".format(label_suffix), yax_formatter=FuncFormatter('{0:0.1%}'.format))
+                self.__fitted_boxplot(avgcpu_bp_df, 'CPU Usage in %',
+                                      "cpu-percentage-bp-{0}".format(label_suffix), yax_formatter=FuncFormatter('{0:0.1%}'.format))
                 cpu_bp_df["Component"] = container.lstrip("CPU ")
                 grouped_cpu_usage = grouped_cpu_usage.append(cpu_bp_df)
                 avgcpu_bp_df["Component"] = container.lstrip("CPU ")
@@ -173,8 +174,8 @@ class Plotter():
                     # source: https://github.com/docker/docker-ce/blob/222348eaf2226f0324a32744ad06d4a7bfe789ac/components/cli/cli/command/container/stats_helpers.go#L225
                     mem_bp_df[run_type] = (df['usage'] - df['stats_cache']).apply(
                         lambda x: x / 1024 / 1024)
-                self.__boxplot(mem_bp_df, 'Memory Usage in MiB',
-                               "mem-usage-mib-bp-{0}".format(label_suffix))
+                self.__fitted_boxplot(mem_bp_df, 'Memory Usage in MiB',
+                                      "mem-usage-mib-bp-{0}".format(label_suffix))
                 mem_bp_df["Component"] = container.lstrip("Memory ")
                 grouped_mem = grouped_mem.append(mem_bp_df)
         self.__boxplot(grouped_mem, 'Memory Usage in MiB',
@@ -191,10 +192,10 @@ class Plotter():
                         lambda x: x / (1024 ** 3))
                     brby_df[run_type] = (df['bytes_read_sum']).apply(
                         lambda x: x / (1024 ** 3))
-                self.__boxplot(bwby_df, 'Block Storage Written in GiB',
-                               "blkio-written-bp-{0}".format(label_suffix))
-                self.__boxplot(brby_df, 'Block Storage Read in GiB',
-                               "blkio-read-bp-{0}".format(label_suffix))
+                self.__fitted_boxplot(bwby_df, 'Block Storage Written in GiB',
+                                      "blkio-written-bp-{0}".format(label_suffix))
+                self.__fitted_boxplot(brby_df, 'Block Storage Read in GiB',
+                                      "blkio-read-bp-{0}".format(label_suffix))
                 bwby_df["Component"] = container.replace("Block IO ", "")
                 grouped_bw = grouped_bw.append(bwby_df)
                 brby_df["Component"] = container.replace("Block IO ", "")
@@ -208,11 +209,12 @@ class Plotter():
         return os.path.join(self.run_config.evaluation_plots_folder_path, file_name)
 
     def cpu_usage_percent_per_run(self, data_per_run_dic, label_suffix):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111)
+        #fig, ax = plt.subplots(1, 1)
+        fig.suptitle(label_suffix[4:])
         ax.set_ylabel('CPU Usage in %')
         ax.set_xlabel('Duration (h:mm:ss)')
-
         x_max = 0
         y_max = 0
         i = -1
@@ -238,14 +240,15 @@ class Plotter():
         # Other formatting stuff
         plt.grid(which='major', axis='both', linestyle='--')
         plt.legend()
-        fig.tight_layout()
+        plt.autoscale()
         self.__save_plot(
             "cpu-usage-percent-{0}".format(label_suffix), *data_per_run_dic.values())
 
     def cpu_usage_per_run(self, data_per_run_dic, label_suffix):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111)
-        ax.set_ylabel('CPU Usage in Seconds')
+        fig.suptitle(label_suffix[4:])
+        ax.set_ylabel('CPU Time in 1/100 th Seconds')
         ax.set_xlabel('Duration (h:mm:ss)')
 
         x_max = 0
@@ -256,7 +259,7 @@ class Plotter():
             df = df.set_index("time_elapsed")
             x_axis = df.index
             # convert to jiffies to seconds, according to https://docs.docker.com/v17.09/engine/admin/runmetrics/#cpu-metrics-cpuacctstat
-            y = df['cpu_stats_cpu_usage_total_usage'] / 100
+            y = df['cpu_stats_cpu_usage_total_usage']
             ax.plot(x_axis, y, '-',
                     label="{0}".format(run_type))
             # set the axis according to max values:
@@ -271,13 +274,13 @@ class Plotter():
         # Other formatting stuff
         plt.grid(which='major', axis='both', linestyle='--')
         plt.legend()
-        fig.tight_layout()
+        plt.autoscale()
         self.__save_plot(
             "cpu-usage-{0}".format(label_suffix), *data_per_run_dic.values())
 
     def mem_usage_per_run(self, data_per_run_dic, label_suffix):
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+        fig, ax = plt.subplots(1, 1)
+        fig.suptitle(label_suffix[7:])
         ax.set_ylabel('Memory Usage in MiB')
         ax.set_xlabel('Duration (h:mm:ss)')
 
@@ -307,13 +310,12 @@ class Plotter():
         # Other formatting stuff
         plt.grid(which='major', axis='both', linestyle='--')
         plt.legend()
-        fig.tight_layout()
         self.__save_plot(
             "mem-usage-{0}".format(label_suffix), *data_per_run_dic.values())
 
     def blkio_per_run(self, data_per_run_dic, label_suffix, blkio_col, ylabel, file_prefix):
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+        fig, ax = plt.subplots(1, 1)
+        fig.suptitle(label_suffix[9:])
         ax.set_ylabel(ylabel)
         ax.set_xlabel('Duration (h:mm:ss)')
 
@@ -343,7 +345,6 @@ class Plotter():
         # Other formatting stuff
         plt.grid(which='major', axis='both', linestyle='--')
         plt.legend()
-        fig.tight_layout()
         self.__save_plot(
             "{0}-{1}".format(file_prefix, label_suffix), *data_per_run_dic.values())
 
@@ -402,18 +403,18 @@ class Plotter():
         plt.savefig(self.get_save_path(format_filename(file_label, "pdf")))
         plt.close()
 
-    def __boxplot(self, bp_df, ylabel, file_label, grp_by=None, yax_formatter=None):
+    def __boxplot(self, bp_df, ylabel, file_label, figsize=None, grp_by=None, yax_formatter=None):
         axes = None
         if grp_by is not None:
-            axes = bp_df.boxplot(by=grp_by)
+            axes = bp_df.boxplot(by=grp_by, figsize=figsize)
         else:
-            axes = bp_df.boxplot()
+            axes = bp_df.boxplot(figsize=figsize)
         # assigned as list, to allow iteration
         # (because grouped boxplox with more then one group
         # return axes as nparray)
         if not isinstance(axes, (list, numpy.ndarray)):
             axes = [axes]
-        
+
         if isinstance(axes, (numpy.ndarray)):
             axes = axes.flatten()
         for single_axes in axes:
@@ -427,11 +428,17 @@ class Plotter():
         plt.suptitle("")  # remove suptitle set by pandas
         self.__save_plot(file_label, bp_df, grp_by=grp_by)
 
-# format the time according to https://stackoverflow.com/questions/15240003/matplotlib-intelligent-axis-labels-for-timedelta
+    def __fitted_boxplot(self, bp_df, ylabel, file_label, grp_by=None, yax_formatter=None):
+        figsize = self.__boxplot_figsize(bp_df)
+        return self.__boxplot(bp_df, ylabel, file_label, figsize=figsize, grp_by=grp_by, yax_formatter=yax_formatter)
+
+    def __boxplot_figsize(self, df):
+        return (2 * len(df.columns), 6)
 
 
 def format_time_ticks(value, pos):
     "Formats this data to a human readable string"
+    # format the time according to https://stackoverflow.com/questions/15240003/matplotlib-intelligent-axis-labels-for-timedelta
     timedlt = datetime.timedelta(seconds=value)
     hours, remainder = divmod(timedlt.total_seconds(), 3600)
     minutes, seconds = divmod(remainder, 60)
