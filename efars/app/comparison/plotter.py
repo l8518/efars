@@ -408,7 +408,6 @@ class Plotter():
         if grp_by is not None:
             bp_df[grp_by] = list(map(lambda x: x.replace(" ", "\n"), bp_df[grp_by]))
         bp_df.columns = list(map(lambda x: x.replace(" ", "\n"), bp_df.columns))
-        print(bp_df.columns)
         axes = None
         if grp_by is not None:
             axes = bp_df.boxplot(by=grp_by, figsize=figsize)
