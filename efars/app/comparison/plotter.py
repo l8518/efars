@@ -438,7 +438,7 @@ class Plotter():
         return self.__boxplot(bp_df, ylabel, file_label, figsize=figsize, grp_by=grp_by, yax_formatter=yax_formatter)
 
     def __boxplot_figsize(self, df):
-        return (2 * len(df.columns), 6)
+        return (2 * len(df.columns), 4.5)
 
 
 def format_time_ticks(value, pos):
