@@ -248,7 +248,7 @@ class Plotter():
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111)
         fig.suptitle(label_suffix[4:])
-        ax.set_ylabel('CPU Time in 1/100 th Seconds')
+        ax.set_ylabel('CPU Time in 1/100th of Seconds')
         ax.set_xlabel('Duration (h:mm:ss)')
 
         x_max = 0
