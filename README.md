@@ -26,7 +26,7 @@ For running this EFARS, you will need to:
 ### Configuration of EFARS
 You can configure this framework implementation by using enviroment variables or a .env file in the root folder. The following variables exist and can be used:
 - `COMPOSE_FILE` : Allows you to choose which compose file should be used for running the evaluation.
-- `DOCKER_SOCK` : Defines the connection to docker daemon, which is required by the Python docker SDK
+- `DOCKER_SOCK` : Defines the connection to docker daemon, which is required by the Python docker SDK. Default are set as follows:
     - Linux/macOS: `DOCKER_SOCK=unix://var/run/docker.sock`
     - Windows: `DOCKER_SOCK=npipe:////./pipe/docker_engine`
 
@@ -35,7 +35,7 @@ Please note, that macOS and Windows need additionall configuration, you have to:
 - Allocate enough memory and CPUs 
 - Windows requires you to share drive
 
-## Hardware Requirements for Each Datasets
+## Hardware Requirements for MovieLens Datasets
 - The respository is configured to run the scientific MovieLens 20m dataset or the much smaller MovieLens Latest Dataset (check [GroupLens website]( https://grouplens.org/datasets/movielens/) for more information ), thus you might need to fulfill, depending on which dataset you use, the following hardware specs:
     - MovieLens Latest Dataset:
         - 16 GB of RAM (tested)
@@ -44,31 +44,7 @@ Please note, that macOS and Windows need additionall configuration, you have to:
         - 80 GB of RAM (tested)
         - Sufficient CPU Cores
 
-# Evaluation Enviroment for MovieLens 20m
-## RAM
-| RAM           | Size           | Total Width | Data Width  |
-| ------------- |:--------------:| -----------:| ----------: |
-| DIMM 0        |       16384 MB | 64 bits     | 64 bits     |
-| DIMM 1        |       16384 MB | 64 bits     | 64 bits     |
-| DIMM 2        |       16384 MB | 64 bits     | 64 bits     |
-| DIMM 3        |       16384 MB | 64 bits     | 64 bits     |
-| DIMM 4        |       14488 MB | 64 bits     | 64 bits     |
-|               |                |             |             |
-| Total:        | 80024MB        | -           | -           |
-
-## CPU
-| RAM           | Size           | Total Width | Data Width  |
-| ------------- |:--------------:| -----------:| ----------: |
-| DIMM 0        |       16384 MB | 64 bits     | 64 bits     |
-| DIMM 1        |       16384 MB | 64 bits     | 64 bits     |
-| DIMM 2        |       16384 MB | 64 bits     | 64 bits     |
-| DIMM 3        |       16384 MB | 64 bits     | 64 bits     |
-| DIMM 4        |       14488 MB | 64 bits     | 64 bits     |
-|               |                |             |             |
-| Total:        | 80024MB        | -           | -           |
-
 ## Docker Resources
-
 
 ## Enviroment Vars
 # Configuration for Running MovieLens 20m
@@ -86,5 +62,3 @@ RUN_TICK_DELAY=2
 RUN_WARM_UP_DELAY=40
 RUN_N_REPETITION=2
 ```
-
-# Misc

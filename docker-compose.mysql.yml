@@ -12,10 +12,10 @@ services:
     - 8000:8000
     - 7070:7070
     depends_on:
-      - mysql
+      - database
     environment:
       PIO_STORAGE_SOURCES_MYSQL_TYPE: jdbc
-      PIO_STORAGE_SOURCES_MYSQL_URL: "jdbc:mysql://mysql/pio"
+      PIO_STORAGE_SOURCES_MYSQL_URL: "jdbc:mysql://database/pio"
       PIO_STORAGE_SOURCES_MYSQL_USERNAME: pio
       PIO_STORAGE_SOURCES_MYSQL_PASSWORD: pio
       PIO_STORAGE_REPOSITORIES_EVENTDATA_NAME: pio_event
@@ -25,11 +25,10 @@ services:
       PIO_STORAGE_REPOSITORIES_MODELDATA_NAME: pio_model
       PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE: MYSQL
       BASIC_REC_WARM_UP_DELAY: 30
+      BASIC_REC_TRAIN_DEPLOY_STEPS_SKIPPED: 10
       BASIC_REC_DRIVER_MEM: 64G
       BASIC_REC_EXECUTOR_MEM: 64G
-      BASIC_REC_TRAIN_DEPLOY_STEPS_SKIPPED: 10
-
-  mysql:
+  database:
     image: mysql:8.0.15
     container_name: database # Required by EFARS for monitoring
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
@@ -38,5 +37,3 @@ services:
       MYSQL_USER: pio
       MYSQL_PASSWORD: pio
       MYSQL_DATABASE: pio
-    # impose a memory limit
-    # mem_limit: 200m

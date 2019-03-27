@@ -11,9 +11,11 @@ services:
     - 9000:9000
     - 8000:8000
     - 7070:7070
+    depends_on:
+      - database
     environment:
       PIO_STORAGE_SOURCES_PGSQL_TYPE: jdbc
-      PIO_STORAGE_SOURCES_PGSQL_URL: "jdbc:postgresql://postgres/pio"
+      PIO_STORAGE_SOURCES_PGSQL_URL: "jdbc:postgresql://database/pio"
       PIO_STORAGE_SOURCES_PGSQL_USERNAME: pio
       PIO_STORAGE_SOURCES_PGSQL_PASSWORD: pio
       PIO_STORAGE_REPOSITORIES_EVENTDATA_NAME: pio_event
@@ -23,10 +25,10 @@ services:
       PIO_STORAGE_REPOSITORIES_MODELDATA_NAME: pio_model
       PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE: PGSQL
       BASIC_REC_WARM_UP_DELAY: 30
+      BASIC_REC_TRAIN_DEPLOY_STEPS_SKIPPED: 10
       BASIC_REC_DRIVER_MEM: 64G
       BASIC_REC_EXECUTOR_MEM: 64G
-      BASIC_REC_TRAIN_DEPLOY_STEPS_SKIPPED: 10
-  postgres:
+  database:
     image: postgres:9.6.12
     container_name: database # Required by EFARS for monitoring
     environment:
