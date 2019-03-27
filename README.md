@@ -60,9 +60,9 @@ You can configure this framework implementation by using environment variables o
     - Default: `RUN_FETCHES_RATING_N=20`
 
 ### Configuration of Docker for macOS/Windows
-Please note, that macOS and Windows need additional configuration, you have to:
+Please note, that macOS and Windows need additional configuration of Docker, you have to permit Docker to:
 - Allocate enough memory and CPUs 
-- Windows requires you to share drive
+- Access the shared drive on Windows
 
 ## Hardware Requirements for MovieLens Datasets
 - The repository is configured to run the scientific MovieLens 20m dataset or the much smaller MovieLens Latest Dataset (check [GroupLens website]( https://grouplens.org/datasets/movielens/) for more information ). Thus, you might need to fulfill, depending on which dataset you use, the following hardware specs:
